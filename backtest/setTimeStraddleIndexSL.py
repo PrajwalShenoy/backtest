@@ -1,12 +1,12 @@
 from backtest import Backtester, pd
 from pprint import pprint
 
-class setTimeFrameStraddle(Backtester):
+class setTimeStraddleIndexSL(Backtester):
     def __init__(self, index, start_date, end_date, entry_time, exit_time, stop_loss_p, **kwargs):
         self.entry_time = entry_time
         self.exit_time = exit_time
         self.stop_loss_p = stop_loss_p
-        super(setTimeFrameStraddle, self).__init__(index, start_date, end_date, **kwargs)
+        super(setTimeStraddleIndexSL, self).__init__(index, start_date, end_date, **kwargs)
         self.get_additional_vars(kwargs)
 
     def get_additional_vars(self, kwargs):
@@ -23,8 +23,8 @@ class setTimeFrameStraddle(Backtester):
     
     def initialise_for_csv_backtest(self):
         current_date = str(self.current_date_format)
-        index_df = self.df.loc[self.df["symbol"] == self.index].sort_values(by = "time")
-        self.index_price, self.banknifty_time = self.get_price_for_nearest_time(index_df, self.entry_time)
+        self.index_df = self.df.loc[self.df["symbol"] == self.index].sort_values(by = "time")
+        self.index_price, self.index_time = self.get_price_for_nearest_time(self.index_df, self.entry_time)
         index_strike_price = self.find_strike_price(self.index_price)
         print(index_strike_price, current_date)
         thursday = self.next_thursday(self.current_date_format)
@@ -35,29 +35,42 @@ class setTimeFrameStraddle(Backtester):
         self.ce_price, self.ce_initial_time = self.get_price_for_nearest_time(self.ce_df, self.entry_time)
         self.pe_df = self.df.loc[self.df["symbol"] == self.pe_symbol].sort_values(by = "time")
         self.pe_price, self.pe_initial_time = self.get_price_for_nearest_time(self.pe_df, self.entry_time)
-        self.ce_sl = self.ce_price * self.stop_loss_p
-        self.pe_sl = self.pe_price * self.stop_loss_p
+        self.ce_sl = self.index_price + (self.index_price * self.stop_loss_p)
+        self.pe_sl = self.index_price - (self.index_price * self.stop_loss_p)
         print(self.ce_symbol, self.ce_price, self.ce_sl, self.ce_initial_time)
         print(self.pe_symbol, self.pe_price, self.pe_sl, self.pe_initial_time)
+
+    def check_and_set_sl_to_cost(self, ce_sl_hit, pe_sl_hit):
+        if ce_sl_hit + pe_sl_hit == 1:
+            if ce_sl_hit:
+                self.pe_sl = self.index_price
+            elif pe_sl_hit:
+                self.ce_sl = self.index_price
+        if ce_sl_hit + pe_sl_hit == 2:
+            self.log.debug("No adjustment to SL as this is the second SL hit")
+            pass
 
     def csv_backtest_for_day(self):
         ce_sl_hit = False
         pe_sl_hit = False
+        self.index_df = self.index_df.sort_values(by = "time")
         self.ce_df = self.ce_df.sort_values(by = "time")
         self.pe_df = self.pe_df.sort_values(by = "time")
-        for i in range(len(self.ce_df)):
-            if self.create_time(self.entry_time) <= self.create_time(self.ce_df.iloc[i]["time"]) <= self.create_time(self.exit_time):
+        for i in range(len(self.index_df)):
+            if self.create_time(self.entry_time) <= self.create_time(self.index_df.iloc[i]["time"]) <= self.create_time(self.exit_time):
+                self.current_index_price_ce, self.current_index_time = self.index_df.iloc[i]["high"], self.index_df.iloc[i]["time"]
+                self.current_index_price_pe, self.current_index_time = self.index_df.iloc[i]["low"], self.index_df.iloc[i]["time"]
                 if not ce_sl_hit:
                     self.current_ce_price, self.current_ce_time = self.ce_df.iloc[i]["high"], self.ce_df.iloc[i]["time"]
-                    if self.current_ce_price >= self.ce_sl:
+                    if self.current_index_price_ce >= self.ce_sl:
                         ce_sl_hit = True
-                        self.current_ce_price = self.ce_sl
+                        self.check_and_set_sl_to_cost(ce_sl_hit, pe_sl_hit)
                         print("\033[1;91mstoploss hit for CE\033[0m")
                 if not pe_sl_hit:
                     self.current_pe_price, self.current_pe_time = self.pe_df.iloc[i]["high"], self.pe_df.iloc[i]["time"]
-                    if self.current_pe_price >= self.pe_sl:
+                    if self.current_index_price_pe <= self.pe_sl:
                         pe_sl_hit = True
-                        self.current_pe_price = self.pe_sl
+                        self.check_and_set_sl_to_cost(ce_sl_hit, pe_sl_hit)
                         print("\033[1;91mstoploss hit for PE\033[0m")
                 if self.calculate_result(self.ce_price, self.current_ce_price, self.pe_price, self.current_pe_price) < self.max_loss_per_lot * self.number_of_lots:
                     break
@@ -68,11 +81,19 @@ class setTimeFrameStraddle(Backtester):
         self.success = 0
         self.failure = 0
         self.max_profit = 0
+        self.total_profit = 0
+        self.total_profit_days = 0
+        self.max_days_with_profit = 0
+        self.max_days_with_profit_temp = 0
         self.max_loss = 0
+        self.total_loss = 0
+        self.total_loss_days = 0
+        self.max_days_with_loss = 0
+        self.max_days_with_loss_temp = 0
         self.overall_result = 0
         self.monthly_results = self.create_monthly_result_dict()
         self.csvFile = open(self.csv_out_file, "w")
-        self.buffer = "Date,Index,CE,CE Time,CE Price,CE SL,CE LTP,PE,PE Time,PE Price,PE SL,PE LTP,SL hit,Net\n"
+        self.buffer = "Date,Day,Index,CE,CE Time,CE Price,CE SL,CE LTP,PE,PE Time,PE Price,PE SL,PE LTP,SL hit,Net\n"
         self.csvFile.write(self.buffer)
         self.current_date_format = self.create_date(self.start_date)
         self.end_date_format = self.create_date(self.end_date)
@@ -87,12 +108,22 @@ class setTimeFrameStraddle(Backtester):
                     self.monthly_results[str(self.current_date_format)[:-3]] += self.result
                     print("==========================================")
                     if self.result >= 0:
+                        self.max_days_with_loss = max(self.max_days_with_loss, self.max_days_with_loss_temp)
+                        self.max_days_with_loss_temp = 0
+                        self.max_days_with_profit_temp = self.max_days_with_profit_temp + 1
+                        self.total_profit_days = self.total_profit_days + 1
+                        self.total_profit = self.total_profit + self.result
                         self.max_profit = max(self.max_profit, self.result)
                         print("\033[1;92m",self.deci2(self.result), "\n\033[0m")
                     else:
+                        self.max_days_with_profit = max(self.max_days_with_profit, self.max_days_with_profit_temp)
+                        self.max_days_with_profit_temp = 0
+                        self.max_days_with_loss_temp = self.max_days_with_loss_temp + 1
+                        self.total_loss_days = self.total_loss_days + 1
+                        self.total_loss = self.total_loss + self.result
                         self.max_loss = min(self.max_loss, self.result)
                         print("\033[1;91m",self.deci2(self.result), "\n\033[0m")
-                    self.buffer = [str(self.current_date_format), str(float(self.index_price)), self.ce_symbol, self.ce_initial_time, str(self.ce_price), str(self.ce_sl), str(self.current_ce_price), \
+                    self.buffer = [str(self.current_date_format), self.get_day(self.current_date_format), str(float(self.index_price)), self.ce_symbol, self.ce_initial_time, str(self.ce_price), str(self.ce_sl), str(self.current_ce_price), \
                                     self.pe_symbol, self.pe_initial_time, str(self.pe_price), str(self.pe_sl), str(self.current_pe_price), str(self.sl_hit), str(self.deci2(self.result))]
                     self.csvFile.write(",".join(self.buffer) + "\n")
                     self.success = self.success + 1
@@ -106,14 +137,21 @@ class setTimeFrameStraddle(Backtester):
                 pass
             self.current_date_format = self.increment_date(self.current_date_format)
         self.csvFile.close()
+        self.max_days_with_profit = max(self.max_days_with_profit, self.max_days_with_profit_temp)
+        self.max_days_with_loss = max(self.max_days_with_loss, self.max_days_with_loss_temp)
+        print("Entry time:", self.entry_time, "Exit time:", self.exit_time, "Sl:", self.stop_loss_p)
         print("Overall result", self.overall_result)
         print("Average result", self.overall_result/(self.success + self.failure))
         print("Max profit was", self.max_profit)
+        print("Average profit on profit making days was", self.total_profit/self.total_profit_days)
+        print("Winning streak:", self.max_days_with_profit)
+        print("Win percentage", self.total_profit_days/self.success)
         print("Max loss was", self.max_loss)
+        print("Average loss on loss making days was", self.total_loss/self.total_loss_days)
+        print("Loosing streak:", self.max_days_with_loss)
+        print("Win percentage", self.total_loss_days/self.success)
         print("Successfull back tests:", self.success)
         print("Failed back tests:", self.failure)
         print("Monthly wise resport is given below")
-        pprint(failed_backtests)
         for i, j in self.monthly_results.items():
             print(i, ": ", j)
-

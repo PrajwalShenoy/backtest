@@ -32,7 +32,7 @@ class Backtester():
         self.get_trading_holidays()
 
     def get_base_vars(self, kwargs):
-        pass
+        self.days_to_run = kwargs.get("days_to_run", [0,1,2,3,4])
 
     def get_trading_holidays(self):
         from publicHolidays import public_holidays
@@ -71,8 +71,7 @@ class Backtester():
         if type(d) != datetime.date:
             d = datetime.date(d.split("-")[0], d.split("-")[1], d.split("-")[2])
         d = d + datetime.timedelta(1)
-        # if d.weekday() == 5 or d.weekday() == 6 or d.weekday() == 4 or d.weekday() == 0 or d.weekday() == 1:
-        if d.weekday() == 5 or d.weekday() == 6:
+        if d.weekday() == 5 or d.weekday() == 6 or d.weekday() in self.days_to_run:
             d = self.increment_date(d)
         return d
 
@@ -96,6 +95,22 @@ class Backtester():
             return d
         else:
             self.log.error("Date is not in the required format, follow the 'yyyy-mm-dd' format")
+
+    def get_day(self, d):
+        days_of_the_week = {
+            0: "Mon",
+            1: "Tue",
+            2: "Wed",
+            3: "Thu",
+            4: "Fri",
+            5: "Sat",
+            6: "Sun"
+        }
+        if type(d) != datetime.date and type(d) == str:
+            d = datetime.date(int(d.split('-')[0]), int(d.split('-')[1]), int(d.split('-')[2]))
+        elif type(d) == datetime.date:
+            pass
+        return days_of_the_week[d.weekday()]
 
     def create_time(self, t):
         if type(t) != datetime.time and type(t) == str:
