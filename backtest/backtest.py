@@ -41,15 +41,6 @@ class Backtester():
     
     def create_scrip_symbol(self, date, month, year, option_type, strike_price, index = "BANKNIFTY"):
         return self.df.iloc[10]["symbol"][:16] + str(strike_price) + option_type.upper()
-        # symbol = ""
-        # if str(year) + "-" + str(month) + "-" + str(date) in self.public_holidays:
-        #     date = "0" + str(int(date) - 1) if (int(date) - 1)//10 < 1 else str(int(date) - 1)
-        # if index == "BANKNIFTY":
-        #     symbol = "BANKNIFTY" + str(date) + self.months[str(month)].upper() + str(year)[-2:] + str(strike_price) + option_type.upper()
-        #     self.log.debug("Created scrip symbol " + symbol)
-        # else:
-        #     self.log.error("Other indeces are not yet supported")
-        # return symbol
     
     def calculate_result(self, ce_price, current_ce_price, pe_price, current_pe_price):
         net = ce_price - current_ce_price + pe_price - current_pe_price
@@ -69,9 +60,9 @@ class Backtester():
 
     def increment_date(self, d):
         if type(d) != datetime.date:
-            d = datetime.date(d.split("-")[0], d.split("-")[1], d.split("-")[2])
+            d = self.create_date(d)
         d = d + datetime.timedelta(1)
-        if d.weekday() == 5 or d.weekday() == 6 or d.weekday() in self.days_to_run:
+        if d.weekday() == 5 or d.weekday() == 6 or d.weekday() not in self.days_to_run:
             d = self.increment_date(d)
         return d
 
