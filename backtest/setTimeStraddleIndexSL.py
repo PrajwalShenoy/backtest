@@ -99,6 +99,8 @@ class setTimeStraddleIndexSL(Backtester):
         self.end_date_format = self.create_date(self.end_date)
         failed_backtests = {}
         while (self.end_date_format - self.current_date_format).days >= 0:
+            while self.create_date(self.current_date_format).weekday() not in self.days_to_run:
+                self.current_date_format = self.increment_date(self.current_date_format)
             if str(self.current_date_format) not in self.public_holidays:
                 try:
                     self.df = self.read_csv_data()

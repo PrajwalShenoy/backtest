@@ -5,3 +5,12 @@
 # check data quality
 # Create a GUI charter to create charts for specific days
 # Create tool to analyse the results
+
+
+
+# BUG FIXES
+Fixed the commands present in examples.py (trade1.run() was replaced with trade1.runBackTest())
+Fixed the issues with "backtest execution date"
+Fixed the issue with the "first date"/"start_date" being present in all reports (This was causing problems in consolidated reports)
+Consolidated reports are now sorted by default. Previously the date order was jumbled
+Added historical_data_script, made additions to examples.py as well.
