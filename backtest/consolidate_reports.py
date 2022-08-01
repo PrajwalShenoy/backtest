@@ -12,4 +12,5 @@ def consolidate_reports(csv_file_names = [], consolidated_report = "consolidated
             else:
                 temp_df = pd.DataFrame({"Date":[csv_df["Date"][i]], "Day":[csv_df["Day"][i]], "Net":[csv_df["Net"][i]]})
                 report_df = pd.concat([report_df, temp_df], ignore_index = True, axis=0)
-    report_df.to_csv(consolidated_report.sort_values(by=['Date'])[['Date', 'Day', 'Net']])
+    report_df = report_df.sort_values(by=['Date'])[['Date', 'Day', 'Net']]
+    report_df.to_csv(consolidated_report)
