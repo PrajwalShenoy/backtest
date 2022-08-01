@@ -1,6 +1,7 @@
 # Historical data curtosy of http://historical.maticalgos.com/
 from maticalgos.historical import historical
 import datetime
+import os
 
 
 def increment_date(d):
@@ -12,7 +13,7 @@ def increment_date(d):
 def create_date(d):
     return datetime.date(int(d.split('-')[0]), int(d.split('-')[1]), int(d.split('-')[2]))
 
-def get_historical_data(index, email, password, start_date, end_date):
+def get_historical_data(index, email, password, start_date, end_date, file_path):
     ma = historical(email)
     ma.login(password)
     current_date_format = create_date(start_date)
@@ -21,7 +22,8 @@ def get_historical_data(index, email, password, start_date, end_date):
     while (end_date_format - current_date_format).days >= 0:
         try:
             data = ma.get_data(index, current_date_format)
-            data.to_csv("./historical_data/" + str(current_date_format).replace("-", "") + ".csv")
+            csv_path = os.path.join(file_path, str(current_date_format).replace("-", "") + ".csv")
+            data.to_csv(csv_path)
             print("\033[1;92mFinished processing the following date", str(current_date_format), "\033[0m")
         except Exception as err:
             faulty_dates.append(str(current_date_format))
