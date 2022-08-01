@@ -1,8 +1,8 @@
+from backtest.publicHolidays import public_holidays
 import pandas as pd
 import datetime
 import logging
 import csv
-
 
 
 class Backtester():
@@ -35,7 +35,6 @@ class Backtester():
         self.days_to_run = kwargs.get("days_to_run", [0,1,2,3,4])
 
     def get_trading_holidays(self):
-        from publicHolidays import public_holidays
         self.public_holidays = public_holidays
 
     

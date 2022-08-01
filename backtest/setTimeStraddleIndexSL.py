@@ -1,5 +1,6 @@
-from backtest import Backtester, pd
+from backtest.backtester import Backtester
 from pprint import pprint
+import pandas as pd
 
 class setTimeStraddleIndexSL(Backtester):
     def __init__(self, index, start_date, end_date, entry_time, exit_time, stop_loss_p, **kwargs):
