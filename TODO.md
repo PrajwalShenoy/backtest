@@ -24,3 +24,9 @@
 * Updated the examples.py with the new usage
 * Fixed the bug in consolidated_report.py where previously string was being sorted, now the respective dataframe will be sorted
 * Chnaged backtest.py to backtester.py to conform with python packaging norms
+
+## UPDATES (Aug 3rd 2022, 3:37 AM)
+* Added `analyseReport.py` this will help visualize CSV reports generated
+* Updated the `publicHolidays.py` to include holidays from 2018 to 2022
+* Updated the `setTimeFrameStraddle` to bring it on par with `setTimeStraddleIndexSL`
+* Updated `requirements.txt`
