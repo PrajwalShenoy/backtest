@@ -69,16 +69,26 @@ class setTimeFrameStraddle(Backtester):
         self.success = 0
         self.failure = 0
         self.max_profit = 0
+        self.total_profit = 0
+        self.total_profit_days = 0
+        self.max_days_with_profit = 0
+        self.max_days_with_profit_temp = 0
         self.max_loss = 0
+        self.total_loss = 0
+        self.total_loss_days = 0
+        self.max_days_with_loss = 0
+        self.max_days_with_loss_temp = 0
         self.overall_result = 0
         self.monthly_results = self.create_monthly_result_dict()
         self.csvFile = open(self.csv_out_file, "w")
-        self.buffer = "Date,Index,CE,CE Time,CE Price,CE SL,CE LTP,PE,PE Time,PE Price,PE SL,PE LTP,SL hit,Net\n"
+        self.buffer = "Date,Day,Index,CE,CE Time,CE Price,CE SL,CE LTP,PE,PE Time,PE Price,PE SL,PE LTP,SL hit,Net\n"
         self.csvFile.write(self.buffer)
         self.current_date_format = self.create_date(self.start_date)
         self.end_date_format = self.create_date(self.end_date)
         failed_backtests = {}
         while (self.end_date_format - self.current_date_format).days >= 0:
+            while self.create_date(self.current_date_format).weekday() not in self.days_to_run:
+                self.current_date_format = self.increment_date(self.current_date_format)
             if str(self.current_date_format) not in self.public_holidays:
                 try:
                     self.df = self.read_csv_data()
@@ -88,12 +98,22 @@ class setTimeFrameStraddle(Backtester):
                     self.monthly_results[str(self.current_date_format)[:-3]] += self.result
                     print("==========================================")
                     if self.result >= 0:
+                        self.max_days_with_loss = max(self.max_days_with_loss, self.max_days_with_loss_temp)
+                        self.max_days_with_loss_temp = 0
+                        self.max_days_with_profit_temp = self.max_days_with_profit_temp + 1
+                        self.total_profit_days = self.total_profit_days + 1
+                        self.total_profit = self.total_profit + self.result
                         self.max_profit = max(self.max_profit, self.result)
                         print("\033[1;92m",self.deci2(self.result), "\n\033[0m")
                     else:
+                        self.max_days_with_profit = max(self.max_days_with_profit, self.max_days_with_profit_temp)
+                        self.max_days_with_profit_temp = 0
+                        self.max_days_with_loss_temp = self.max_days_with_loss_temp + 1
+                        self.total_loss_days = self.total_loss_days + 1
+                        self.total_loss = self.total_loss + self.result
                         self.max_loss = min(self.max_loss, self.result)
                         print("\033[1;91m",self.deci2(self.result), "\n\033[0m")
-                    self.buffer = [str(self.current_date_format), str(float(self.index_price)), self.ce_symbol, self.ce_initial_time, str(self.ce_price), str(self.ce_sl), str(self.current_ce_price), \
+                    self.buffer = [str(self.current_date_format), self.get_day(self.current_date_format), str(float(self.index_price)), self.ce_symbol, self.ce_initial_time, str(self.ce_price), str(self.ce_sl), str(self.current_ce_price), \
                                     self.pe_symbol, self.pe_initial_time, str(self.pe_price), str(self.pe_sl), str(self.current_pe_price), str(self.sl_hit), str(self.deci2(self.result))]
                     self.csvFile.write(",".join(self.buffer) + "\n")
                     self.success = self.success + 1
@@ -107,14 +127,22 @@ class setTimeFrameStraddle(Backtester):
                 pass
             self.current_date_format = self.increment_date(self.current_date_format)
         self.csvFile.close()
+        self.max_days_with_profit = max(self.max_days_with_profit, self.max_days_with_profit_temp)
+        self.max_days_with_loss = max(self.max_days_with_loss, self.max_days_with_loss_temp)
+        print("Entry time:", self.entry_time, "Exit time:", self.exit_time, "Sl:", self.stop_loss_p)
         print("Overall result", self.overall_result)
         print("Average result", self.overall_result/(self.success + self.failure))
         print("Max profit was", self.max_profit)
+        print("Average profit on profit making days was", self.total_profit/self.total_profit_days)
+        print("Winning streak:", self.max_days_with_profit)
+        print("Win percentage", self.total_profit_days/self.success)
         print("Max loss was", self.max_loss)
+        print("Average loss on loss making days was", self.total_loss/self.total_loss_days)
+        print("Loosing streak:", self.max_days_with_loss)
+        print("Win percentage", self.total_loss_days/self.success)
         print("Successfull back tests:", self.success)
         print("Failed back tests:", self.failure)
         print("Monthly wise resport is given below")
-        pprint(failed_backtests)
         for i, j in self.monthly_results.items():
             print(i, ": ", j)
 
