@@ -60,6 +60,19 @@ trade2.runBackTest()
 consolidate_reports(csv_file_names=["trade1_report.csv", "trade2_report.csv"], consolidated_report="consolidated.csv")
 ```
 
+## How to use the analysis tool
+* Open a python terminal and run the following command with your custom csv file
+```python
+from backtest.analyseReport import m2mPlot, perWeekdayPieChart, lossesSplit, profitsSplit
+import pandas as pd
+
+df = pd.read_csv("Path to report file")
+profitsSplit(df)
+lossesSplit(df)
+perWeekdayPieChart(df)
+m2mPlot(df)
+```
+
 ## Refer to examples.py for more examples on how to use these tools in a python script
 
 ## Additional information
