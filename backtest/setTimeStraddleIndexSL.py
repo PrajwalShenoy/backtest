@@ -51,6 +51,12 @@ class setTimeStraddleIndexSL(Backtester):
             self.log.debug("No adjustment to SL as this is the second SL hit")
             pass
 
+    def select_acted_sl_price(self, sl_line, index_high, index_low, premium_high, premium_low, slippage=1):
+        sl1 = (sl_line / index_low) * premium_low
+        sl2 = (sl_line / index_high) * premium_high
+        acted_sl = ((sl1 + sl2) / 2) * slippage
+        return acted_sl
+
     def csv_backtest_for_day(self):
         ce_sl_hit = False
         pe_sl_hit = False
@@ -65,12 +71,16 @@ class setTimeStraddleIndexSL(Backtester):
                     self.current_ce_price, self.current_ce_time = self.ce_df.iloc[i]["high"], self.ce_df.iloc[i]["time"]
                     if self.current_index_price_ce >= self.ce_sl:
                         ce_sl_hit = True
+                        self.current_ce_price = self.select_acted_sl_price(self.ce_sl, self.index_df.iloc[i]["high"], self.index_df.iloc[i]["low"],
+                                                                           self.ce_df.iloc[i]["high"], self.ce_df.iloc[i]["low"])
                         self.check_and_set_sl_to_cost(ce_sl_hit, pe_sl_hit)
                         print("\033[1;91mstoploss hit for CE\033[0m")
                 if not pe_sl_hit:
                     self.current_pe_price, self.current_pe_time = self.pe_df.iloc[i]["high"], self.pe_df.iloc[i]["time"]
                     if self.current_index_price_pe <= self.pe_sl:
                         pe_sl_hit = True
+                        self.current_pe_price = self.select_acted_sl_price(self.pe_sl, self.index_df.iloc[i]["high"], self.index_df.iloc[i]["low"],
+                                                                           self.pe_df.iloc[i]["high"], self.pe_df.iloc[i]["low"])
                         self.check_and_set_sl_to_cost(ce_sl_hit, pe_sl_hit)
                         print("\033[1;91mstoploss hit for PE\033[0m")
                 if self.calculate_result(self.ce_price, self.current_ce_price, self.pe_price, self.current_pe_price) < self.max_loss_per_lot * self.number_of_lots:
