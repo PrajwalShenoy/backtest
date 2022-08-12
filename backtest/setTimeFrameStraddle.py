@@ -29,8 +29,8 @@ class setTimeFrameStraddle(Backtester):
         index_strike_price = self.find_strike_price(self.index_price)
         print(index_strike_price, current_date)
         thursday = self.next_thursday(self.current_date_format)
-        self.ce_symbol = self.create_scrip_symbol(str(thursday).split("-")[2], str(thursday).split("-")[1], str(thursday).split("-")[0], "CE", index_strike_price)
-        self.pe_symbol = self.create_scrip_symbol(str(thursday).split("-")[2], str(thursday).split("-")[1], str(thursday).split("-")[0], "PE", index_strike_price)
+        self.ce_symbol = self.create_scrip_symbol("CE", index_strike_price, self.index)
+        self.pe_symbol = self.create_scrip_symbol("PE", index_strike_price, self.index)
         print(self.ce_symbol, self.pe_symbol)
         self.ce_df = self.df.loc[self.df["symbol"] == self.ce_symbol].sort_values(by = "time")
         self.ce_price, self.ce_initial_time = self.get_price_for_nearest_time(self.ce_df, self.entry_time)
@@ -145,4 +145,3 @@ class setTimeFrameStraddle(Backtester):
         print("Monthly wise resport is given below")
         for i, j in self.monthly_results.items():
             print(i, ": ", j)
-

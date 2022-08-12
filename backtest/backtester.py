@@ -33,12 +33,12 @@ class Backtester():
 
     def get_base_vars(self, kwargs):
         self.days_to_run = kwargs.get("days_to_run", [0,1,2,3,4])
+        self.slippage = kwargs.get("slippage", 1)
 
     def get_trading_holidays(self):
         self.public_holidays = public_holidays
 
-    
-    def create_scrip_symbol(self, date, month, year, option_type, strike_price, index = "BANKNIFTY"):
+    def create_scrip_symbol(self, option_type, strike_price, index = "BANKNIFTY"):
         return self.df.iloc[10]["symbol"][:16] + str(strike_price) + option_type.upper()
     
     def calculate_result(self, ce_price, current_ce_price, pe_price, current_pe_price):
@@ -139,5 +139,3 @@ class Backtester():
             return pd.read_csv(file_path)
         else:
             return pd.read_csv(self.historical_data_path + str(self.current_date_format).replace("-", "") + ".csv")
-
-
