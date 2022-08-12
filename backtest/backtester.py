@@ -33,11 +33,11 @@ class Backtester():
 
     def get_base_vars(self, kwargs):
         self.days_to_run = kwargs.get("days_to_run", [0,1,2,3,4])
+        self.slippage = kwargs.get("slippage", 1)
 
     def get_trading_holidays(self):
         self.public_holidays = public_holidays
 
-    
     def create_scrip_symbol(self, date, month, year, option_type, strike_price, index = "BANKNIFTY"):
         return self.df.iloc[10]["symbol"][:16] + str(strike_price) + option_type.upper()
     

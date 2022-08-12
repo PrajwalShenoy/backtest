@@ -29,8 +29,8 @@ class setTimeStraddleIndexSL(Backtester):
         index_strike_price = self.find_strike_price(self.index_price)
         print(index_strike_price, current_date)
         thursday = self.next_thursday(self.current_date_format)
-        self.ce_symbol = self.create_scrip_symbol(str(thursday).split("-")[2], str(thursday).split("-")[1], str(thursday).split("-")[0], "CE", index_strike_price)
-        self.pe_symbol = self.create_scrip_symbol(str(thursday).split("-")[2], str(thursday).split("-")[1], str(thursday).split("-")[0], "PE", index_strike_price)
+        self.ce_symbol = self.create_scrip_symbol("CE", index_strike_price, self.index)
+        self.pe_symbol = self.create_scrip_symbol("PE", index_strike_price, self.index)
         print(self.ce_symbol, self.pe_symbol)
         self.ce_df = self.df.loc[self.df["symbol"] == self.ce_symbol].sort_values(by = "time")
         self.ce_price, self.ce_initial_time = self.get_price_for_nearest_time(self.ce_df, self.entry_time)
@@ -72,7 +72,7 @@ class setTimeStraddleIndexSL(Backtester):
                     if self.current_index_price_ce >= self.ce_sl:
                         ce_sl_hit = True
                         self.current_ce_price = self.select_acted_sl_price(self.ce_sl, self.index_df.iloc[i]["high"], self.index_df.iloc[i]["low"],
-                                                                           self.ce_df.iloc[i]["high"], self.ce_df.iloc[i]["low"])
+                                                                           self.ce_df.iloc[i]["high"], self.ce_df.iloc[i]["low"], slippage=self.slippage)
                         self.check_and_set_sl_to_cost(ce_sl_hit, pe_sl_hit)
                         print("\033[1;91mstoploss hit for CE\033[0m")
                 if not pe_sl_hit:
@@ -80,7 +80,7 @@ class setTimeStraddleIndexSL(Backtester):
                     if self.current_index_price_pe <= self.pe_sl:
                         pe_sl_hit = True
                         self.current_pe_price = self.select_acted_sl_price(self.pe_sl, self.index_df.iloc[i]["high"], self.index_df.iloc[i]["low"],
-                                                                           self.pe_df.iloc[i]["high"], self.pe_df.iloc[i]["low"])
+                                                                           self.pe_df.iloc[i]["high"], self.pe_df.iloc[i]["low"], slippage=self.slippage)
                         self.check_and_set_sl_to_cost(ce_sl_hit, pe_sl_hit)
                         print("\033[1;91mstoploss hit for PE\033[0m")
                 if self.calculate_result(self.ce_price, self.current_ce_price, self.pe_price, self.current_pe_price) < self.max_loss_per_lot * self.number_of_lots:
@@ -137,7 +137,7 @@ class setTimeStraddleIndexSL(Backtester):
                         self.max_loss = min(self.max_loss, self.result)
                         print("\033[1;91m",self.deci2(self.result), "\n\033[0m")
                     self.buffer = [str(self.current_date_format), self.get_day(self.current_date_format), str(float(self.index_price)), self.ce_symbol, self.ce_initial_time, str(self.ce_price), str(self.ce_sl), str(self.current_ce_price), \
-                                    self.pe_symbol, self.pe_initial_time, str(self.pe_price), str(self.pe_sl), str(self.current_pe_price), str(self.sl_hit), str(self.deci2(self.result))]
+                                   self.pe_symbol, self.pe_initial_time, str(self.pe_price), str(self.pe_sl), str(self.current_pe_price), str(self.sl_hit), str(self.deci2(self.result))]
                     self.csvFile.write(",".join(self.buffer) + "\n")
                     self.success = self.success + 1
                 except Exception as e:

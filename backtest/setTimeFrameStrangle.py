@@ -3,10 +3,11 @@ from pprint import pprint
 import pandas as pd
 
 class setTimeFrameStraddle(Backtester):
-    def __init__(self, index, start_date, end_date, entry_time, exit_time, stop_loss_p, **kwargs):
+    def __init__(self, index, start_date, end_date, entry_time, exit_time, point_deviation, stop_loss_p, **kwargs):
         self.entry_time = entry_time
         self.exit_time = exit_time
         self.stop_loss_p = stop_loss_p
+        self.point_deviation = point_deviation
         super(setTimeFrameStraddle, self).__init__(index, start_date, end_date, **kwargs)
         self.get_additional_vars(kwargs)
 
@@ -29,8 +30,8 @@ class setTimeFrameStraddle(Backtester):
         index_strike_price = self.find_strike_price(self.index_price)
         print(index_strike_price, current_date)
         thursday = self.next_thursday(self.current_date_format)
-        self.ce_symbol = self.create_scrip_symbol("CE", index_strike_price, self.index)
-        self.pe_symbol = self.create_scrip_symbol("PE", index_strike_price, self.index)
+        self.ce_symbol = self.create_scrip_symbol("CE", index_strike_price + self.point_deviation, self.index)
+        self.pe_symbol = self.create_scrip_symbol("PE", index_strike_price - self.point_deviation, self.index)
         print(self.ce_symbol, self.pe_symbol)
         self.ce_df = self.df.loc[self.df["symbol"] == self.ce_symbol].sort_values(by = "time")
         self.ce_price, self.ce_initial_time = self.get_price_for_nearest_time(self.ce_df, self.entry_time)

@@ -2,12 +2,13 @@ from backtest.backtester import Backtester
 from pprint import pprint
 import pandas as pd
 
-class setTimeFrameStraddle(Backtester):
-    def __init__(self, index, start_date, end_date, entry_time, exit_time, stop_loss_p, **kwargs):
+class setTimeStrangleIndexSL(Backtester):
+    def __init__(self, index, start_date, end_date, entry_time, exit_time, point_deviation, stop_loss_p, **kwargs):
         self.entry_time = entry_time
         self.exit_time = exit_time
+        self.point_deviation = point_deviation
         self.stop_loss_p = stop_loss_p
-        super(setTimeFrameStraddle, self).__init__(index, start_date, end_date, **kwargs)
+        super(setTimeStraddleIndexSL, self).__init__(index, start_date, end_date, **kwargs)
         self.get_additional_vars(kwargs)
 
     def get_additional_vars(self, kwargs):
@@ -24,41 +25,64 @@ class setTimeFrameStraddle(Backtester):
     
     def initialise_for_csv_backtest(self):
         current_date = str(self.current_date_format)
-        index_df = self.df.loc[self.df["symbol"] == self.index].sort_values(by = "time")
-        self.index_price, self.banknifty_time = self.get_price_for_nearest_time(index_df, self.entry_time)
+        self.index_df = self.df.loc[self.df["symbol"] == self.index].sort_values(by = "time")
+        self.index_price, self.index_time = self.get_price_for_nearest_time(self.index_df, self.entry_time)
         index_strike_price = self.find_strike_price(self.index_price)
         print(index_strike_price, current_date)
         thursday = self.next_thursday(self.current_date_format)
-        self.ce_symbol = self.create_scrip_symbol("CE", index_strike_price, self.index)
-        self.pe_symbol = self.create_scrip_symbol("PE", index_strike_price, self.index)
+        self.ce_symbol = self.create_scrip_symbol("CE", index_strike_price + self.point_deviation, self.index)
+        self.pe_symbol = self.create_scrip_symbol("PE", index_strike_price - self.point_deviation, self.index)
         print(self.ce_symbol, self.pe_symbol)
         self.ce_df = self.df.loc[self.df["symbol"] == self.ce_symbol].sort_values(by = "time")
         self.ce_price, self.ce_initial_time = self.get_price_for_nearest_time(self.ce_df, self.entry_time)
         self.pe_df = self.df.loc[self.df["symbol"] == self.pe_symbol].sort_values(by = "time")
         self.pe_price, self.pe_initial_time = self.get_price_for_nearest_time(self.pe_df, self.entry_time)
-        self.ce_sl = self.ce_price * self.stop_loss_p
-        self.pe_sl = self.pe_price * self.stop_loss_p
+        self.ce_sl = self.index_price + (self.index_price * self.stop_loss_p)
+        self.pe_sl = self.index_price - (self.index_price * self.stop_loss_p)
         print(self.ce_symbol, self.ce_price, self.ce_sl, self.ce_initial_time)
         print(self.pe_symbol, self.pe_price, self.pe_sl, self.pe_initial_time)
+
+    def check_and_set_sl_to_cost(self, ce_sl_hit, pe_sl_hit):
+        if ce_sl_hit + pe_sl_hit == 1:
+            if ce_sl_hit:
+                self.pe_sl = self.index_price
+            elif pe_sl_hit:
+                self.ce_sl = self.index_price
+        if ce_sl_hit + pe_sl_hit == 2:
+            self.log.debug("No adjustment to SL as this is the second SL hit")
+            pass
+
+    def select_acted_sl_price(self, sl_line, index_high, index_low, premium_high, premium_low, slippage=1):
+        sl1 = (sl_line / index_low) * premium_low
+        sl2 = (sl_line / index_high) * premium_high
+        acted_sl = ((sl1 + sl2) / 2) * slippage
+        return acted_sl
 
     def csv_backtest_for_day(self):
         ce_sl_hit = False
         pe_sl_hit = False
+        self.index_df = self.index_df.sort_values(by = "time")
         self.ce_df = self.ce_df.sort_values(by = "time")
         self.pe_df = self.pe_df.sort_values(by = "time")
-        for i in range(len(self.ce_df)):
-            if self.create_time(self.entry_time) <= self.create_time(self.ce_df.iloc[i]["time"]) <= self.create_time(self.exit_time):
+        for i in range(len(self.index_df)):
+            if self.create_time(self.entry_time) <= self.create_time(self.index_df.iloc[i]["time"]) <= self.create_time(self.exit_time):
+                self.current_index_price_ce, self.current_index_time = self.index_df.iloc[i]["high"], self.index_df.iloc[i]["time"]
+                self.current_index_price_pe, self.current_index_time = self.index_df.iloc[i]["low"], self.index_df.iloc[i]["time"]
                 if not ce_sl_hit:
                     self.current_ce_price, self.current_ce_time = self.ce_df.iloc[i]["high"], self.ce_df.iloc[i]["time"]
-                    if self.current_ce_price >= self.ce_sl:
+                    if self.current_index_price_ce >= self.ce_sl:
                         ce_sl_hit = True
-                        self.current_ce_price = self.ce_sl
+                        self.current_ce_price = self.select_acted_sl_price(self.ce_sl, self.index_df.iloc[i]["high"], self.index_df.iloc[i]["low"],
+                                                                           self.ce_df.iloc[i]["high"], self.ce_df.iloc[i]["low"], slippage=self.slippage)
+                        self.check_and_set_sl_to_cost(ce_sl_hit, pe_sl_hit)
                         print("\033[1;91mstoploss hit for CE\033[0m")
                 if not pe_sl_hit:
                     self.current_pe_price, self.current_pe_time = self.pe_df.iloc[i]["high"], self.pe_df.iloc[i]["time"]
-                    if self.current_pe_price >= self.pe_sl:
+                    if self.current_index_price_pe <= self.pe_sl:
                         pe_sl_hit = True
-                        self.current_pe_price = self.pe_sl
+                        self.current_pe_price = self.select_acted_sl_price(self.pe_sl, self.index_df.iloc[i]["high"], self.index_df.iloc[i]["low"],
+                                                                           self.pe_df.iloc[i]["high"], self.pe_df.iloc[i]["low"], slippage=self.slippage)
+                        self.check_and_set_sl_to_cost(ce_sl_hit, pe_sl_hit)
                         print("\033[1;91mstoploss hit for PE\033[0m")
                 if self.calculate_result(self.ce_price, self.current_ce_price, self.pe_price, self.current_pe_price) < self.max_loss_per_lot * self.number_of_lots:
                     break
@@ -114,7 +138,7 @@ class setTimeFrameStraddle(Backtester):
                         self.max_loss = min(self.max_loss, self.result)
                         print("\033[1;91m",self.deci2(self.result), "\n\033[0m")
                     self.buffer = [str(self.current_date_format), self.get_day(self.current_date_format), str(float(self.index_price)), self.ce_symbol, self.ce_initial_time, str(self.ce_price), str(self.ce_sl), str(self.current_ce_price), \
-                                    self.pe_symbol, self.pe_initial_time, str(self.pe_price), str(self.pe_sl), str(self.current_pe_price), str(self.sl_hit), str(self.deci2(self.result))]
+                                   self.pe_symbol, self.pe_initial_time, str(self.pe_price), str(self.pe_sl), str(self.current_pe_price), str(self.sl_hit), str(self.deci2(self.result))]
                     self.csvFile.write(",".join(self.buffer) + "\n")
                     self.success = self.success + 1
                 except Exception as e:
@@ -145,4 +169,3 @@ class setTimeFrameStraddle(Backtester):
         print("Monthly wise resport is given below")
         for i, j in self.monthly_results.items():
             print(i, ": ", j)
-
