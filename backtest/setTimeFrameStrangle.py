@@ -2,13 +2,13 @@ from backtest.backtester import Backtester
 from pprint import pprint
 import pandas as pd
 
-class setTimeFrameStraddle(Backtester):
+class setTimeFrameStrangle(Backtester):
     def __init__(self, index, start_date, end_date, entry_time, exit_time, point_deviation, stop_loss_p, **kwargs):
         self.entry_time = entry_time
         self.exit_time = exit_time
         self.stop_loss_p = stop_loss_p
         self.point_deviation = point_deviation
-        super(setTimeFrameStraddle, self).__init__(index, start_date, end_date, **kwargs)
+        super(setTimeFrameStrangle, self).__init__(index, start_date, end_date, **kwargs)
         self.get_additional_vars(kwargs)
 
     def get_additional_vars(self, kwargs):

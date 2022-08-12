@@ -8,7 +8,7 @@ class setTimeStrangleIndexSL(Backtester):
         self.exit_time = exit_time
         self.point_deviation = point_deviation
         self.stop_loss_p = stop_loss_p
-        super(setTimeStraddleIndexSL, self).__init__(index, start_date, end_date, **kwargs)
+        super(setTimeStrangleIndexSL, self).__init__(index, start_date, end_date, **kwargs)
         self.get_additional_vars(kwargs)
 
     def get_additional_vars(self, kwargs):

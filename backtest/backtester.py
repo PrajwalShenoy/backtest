@@ -38,7 +38,7 @@ class Backtester():
     def get_trading_holidays(self):
         self.public_holidays = public_holidays
 
-    def create_scrip_symbol(self, date, month, year, option_type, strike_price, index = "BANKNIFTY"):
+    def create_scrip_symbol(self, option_type, strike_price, index = "BANKNIFTY"):
         return self.df.iloc[10]["symbol"][:16] + str(strike_price) + option_type.upper()
     
     def calculate_result(self, ce_price, current_ce_price, pe_price, current_pe_price):
