@@ -145,4 +145,3 @@ class setTimeFrameStraddle(Backtester):
         print("Monthly wise resport is given below")
         for i, j in self.monthly_results.items():
             print(i, ": ", j)
-

@@ -139,5 +139,3 @@ class Backtester():
             return pd.read_csv(file_path)
         else:
             return pd.read_csv(self.historical_data_path + str(self.current_date_format).replace("-", "") + ".csv")
-
-
